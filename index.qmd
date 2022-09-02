@@ -1,0 +1,75 @@
+---
+title: "STAA 566 GitHub Example"
+author: "Ander Wilson"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## R Code
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+
+# Load data (see data repo for code)
+load("../data/LongsPeakTemperature/LongsPeakTemperature.rda")
+
+# summarize data for years prior to 2021
+lp_temp <- lp_temp %>% 
+  mutate(month = lubridate::month(Date, label = TRUE), 
+         year = lubridate::year(Date)) %>%
+  filter(SiteNum == "0007") %>%
+  group_by(year,month) %>%
+  summarise(Temp = mean(Temp))
+  
+
+p_temp <- ggplot(lp_temp) + 
+  geom_line(data= . %>% filter(year!=2020), 
+            aes(x=month, y=Temp, group=year),
+            color="grey70", alpha=.3) + 
+  geom_line(data= . %>% filter(year==2021), 
+            aes(x=month, y=Temp, group=year),
+            color="red") + 
+  geom_point(data= . %>% filter(year==2021), 
+            aes(x=month, y=Temp, group=year),
+            color="red")
+
+
+p_temp <- p_temp + theme_minimal(base_size=12)
+p_temp <- p_temp + ylab(expression("Average temperature ("*degree*"F)"))
+p_temp <- p_temp + labs(title = "Monthly Average Temperature on Longs Peak from 1980-2021",
+              subtitle=str_wrap(paste0("Based on daily average temperature data from the US Environmental Protection Agency. All data are from monitor site number 0007. Data downloaded on "
+                                       ,format(lubridate::today(),  format = '%B %d %Y'),".")))
+p_temp <- p_temp + theme(panel.grid.major.x = element_blank(),
+               panel.grid.minor.y = element_blank(),
+               panel.grid.major.y = element_line(linetype = 3, color="grey80"),
+               axis.title.x = element_blank(),
+               plot.subtitle = element_text(color="grey30"))
+
+p_temp <- p_temp + ggrepel::geom_label_repel(data= . %>% filter(year==2021 & month==max(month)),
+                              aes(x=month, y=Temp, label = year),
+                 nudge_x = .5,
+                 color="red",
+                 label.size=NA,
+                 segment.color = NA)
+```
+
+## Save Figure as pdf
+
+```{r save as pdf}
+pdf("LongsPeak.pdf", heigh=6, width=8)
+print(p_temp)
+dev.off()
+```
+
+## Display Figure in HTLM
+
+```{r diplay}
+p_temp
+```
